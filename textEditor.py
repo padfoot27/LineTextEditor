@@ -1,3 +1,5 @@
+import numbers
+
 class TextEditor:
     
     invalidOperation = 'Invalid operation' 
@@ -56,7 +58,8 @@ class TextEditor:
 
     def displaySpecificLines(self, n, m):
         if self.checkMultipleBounds(n,m) == TextEditor.invalidOperation:
-            return TextEditor.invalidOperation
+            print TextEditor.invalidOperation 
+            return
 
         for i in xrange(n - 1, m):
             print self.text[i]
@@ -64,7 +67,8 @@ class TextEditor:
     def insertLineAtN(self, insertText, n):
         if self.checkBounds(n) == TextEditor.invalidOperation:
             if not (self.numLines == 0 and n == 1):
-                return TextEditor.invalidOperation
+                print TextEditor.invalidOperation 
+                return
         
         if TextEditor.undo:
             self.commandStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n))
@@ -75,7 +79,8 @@ class TextEditor:
 
     def deleteLineAtN(self, n):
         if self.checkBounds(n) == TextEditor.invalidOperation:
-            return TextEditor.invalidOperation
+            print TextEditor.invalidOperation 
+            return
         if TextEditor.undo:
             self.commandStack.insert(0, TextEditor.insertLineCommand + TextEditor.dot + str(n) + TextEditor.dot + self.text[n - 1])
         else:
@@ -85,7 +90,8 @@ class TextEditor:
 
     def deleteMultipleLines(self, n, m):
         if self.checkMultipleBounds(n,m) == TextEditor.invalidOperation:
-            return TextEditor.invalidOperation
+            print TextEditor.invalidOperation
+            return 
         
         if TextEditor.undo:
             self.commandStack.insert(0, TextEditor.insertMultipleLineCommand)
@@ -102,7 +108,8 @@ class TextEditor:
 
         if self.checkBounds(n) == TextEditor.invalidOperation:
             if not (self.numLines == 0 and n == 1):
-                return TextEditor.invalidOperation
+                print TextEditor.invalidOperation
+                return 
         
         if TextEditor.undo:
             self.commandStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n) + TextEditor.dot + str(n + len(text) - 1))
@@ -114,13 +121,15 @@ class TextEditor:
     
     def copyMultipleLines(self, n, m):
         if self.checkMultipleBounds(n,m) == TextEditor.invalidOperation:
-            return TextEditor.invalidOperation
+            print TextEditor.invalidOperation
+            return 
         
         self.clipBoard = self.text[n - 1 : m]
 
     def pasteAtN(self, n):
         if (self.clipBoard == ""):
-           return
+            print TextEditor.invalidOperation
+            return 
         self.insertMultipleLines(n, self.clipBoard)
 
     def undoCommand(self):
@@ -142,13 +151,44 @@ class TextEditor:
 
         self.executeCommand(prevCommand)
     
+    def parseCommand(self, command):
+        
+        command = command.split(".")
+
+        n = -1
+
+        try:
+            n = int(command[1])
+            
+        except:
+            print TextEditor.invalidOperation
+            
+        return n
+
+    def parseCommandMultipleIndex(self, command):
+        
+        command = command.split(".")
+        
+        n = -1
+        m = -1
+
+        try:
+            n = int(command[1])
+            m = int(command[2])
+        except:
+            print TextEditor.invalidOperation
+
+        return n,m
+    
+    def checkParsedValue(self, n):
+        return not (isinstance(n, numbers.Integral)) and (n != -1)
+
     def executeCommand(self, command):
         lenCommand = len(command)
         if lenCommand == 0:
             print TextEditor.invalidOperation
             TextEditor.undo = True
             
-
         elif lenCommand == 1 and command == TextEditor.dispayContentCommand:
             self.displayText()
             TextEditor.undo = True
@@ -174,63 +214,35 @@ class TextEditor:
             print TextEditor.invalidOperation
 
         elif command[0 : 2] == TextEditor.displaySpecificLinesCommand:
-            command = command.split(".")
-            n = -1
-            m = -1
 
-            try:
-                n = int(command[1])
-                m = int(command[2])
-            except:
-                print TextEditor.invalidOperation
-
+            n, m = self.parseCommandMultipleIndex(command)
+            if (self.checkParsedValue(n) or self.checkParsedValue(m)):
+                return
+            
             self.displaySpecificLines(n , m)
             TextEditor.undo = True
 
         elif command[0] == TextEditor.insertLineCommand:
-            command = command.split(".")
-
-            n = -1
-
-            try:
-                n = int(command[1])
-            except:
-                print TextEditor.invalidOperation
+            n = self.parseCommand(command)
+            if (self.checkParsedValue(n)):
                 return
-
+            command = command.split(self.dot) 
             self.insertLineAtN(command[2], n)
             TextEditor.undo = True
             
         
         elif command[0] == TextEditor.copyLineCommand:
-            
-            command = command.split(".")
-            if command[0] != TextEditor.copyLineCommandFull:
-                print TextEditor.invalidOperation
-                return
-            n = -1
-            m = -1
-            try :
-                n = int(command[1])
-                m = int(command[2])
-            except:
-                print TextEditor.invalidOperation
+            n, m = self.parseCommandMultipleIndex(command)
+            if (self.checkParsedValue(n) and self.checkParsedValue(m)):
                 return
 
             self.copyMultipleLines(n , m)
             TextEditor.undo = True
 
         elif command[0] == TextEditor.pasteCommand:
-            
-            command = command.split(".")
-            
-            n = -1 
-            
-            try:
-                n = int(command[1])
-
-            except:
-                print TextEditor.invalidOperation
+            n = self.parseCommand(command)
+            if (self.checkParsedValue(n)):
+                return
 
             self.pasteAtN(n)
             TextEditor.undo = True
@@ -244,14 +256,8 @@ class TextEditor:
 
         elif command[0 : 2] == TextEditor.deleteLineCommand and len(command.split(".")) == 2:
             
-            command = command.split(".")
-
-            n = -1
-
-            try:
-                n = int(command[1])
-            except:
-                print TextEditor.invalidOperation
+            n = self.parseCommand(command)
+            if (self.checkParsedValue(n)):
                 return
             
             self.deleteLineAtN(n)
@@ -259,16 +265,11 @@ class TextEditor:
 
         elif command[0 : 2] == TextEditor.deleteLineCommand and len(command.split(".")) == 3:
             
-            command = command.split(".")
-
-            try:
-                n = int(command[1])
-                m = int(command[2])
-
-            except:
-                print TextEditor.invalidOperation
+            n, m = self.parseCommandMultipleIndex(command)
+            
+            if (self.checkParsedValue(n) and self.checkParsedValue(m)):
                 return
-
+            
             self.deleteMultipleLines(n, m)
             TextEditor.undo = True
 
