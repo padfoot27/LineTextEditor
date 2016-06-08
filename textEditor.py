@@ -22,7 +22,8 @@ class TextEditor:
         self.clipBoard = []
         self.commandStack = []
         self.redoStack = []
-        self.deleteTextStack = []
+        self.deleteTextStackUndo = []
+        self.deleteTextStackRedo = []
         self.lineLength = 45
 
     def wrapText(self, rawText):
@@ -39,7 +40,7 @@ class TextEditor:
         return n <= 0
 
     def checkUpperBound(self, n, maxLines):
-        return n > maxLines 
+        return n > maxLines + 1 
 
     def checkMultipleBounds(self, n, m):
         if (self.checkLowerBound(n) or self.checkUpperBound(m, self.numLines) or n > m):
@@ -69,7 +70,6 @@ class TextEditor:
             self.commandStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n))
         else :
             self.redoStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n))
-            
         self.text.insert(n - 1, insertText)
         self.numLines += 1
 
@@ -89,10 +89,12 @@ class TextEditor:
         
         if TextEditor.undo:
             self.commandStack.insert(0, TextEditor.insertMultipleLineCommand)
+            self.deleteTextStackRedo.insert(0, (self.text[n - 1 : m], n))
         else :
             self.redoStack.insert(0, TextEditor.insertMultipleLineCommand)
+            self.deleteTextStackUndo.insert(0, (self.text[n - 1 : m], n))
+
             
-        self.deleteTextStack.insert(0, (self.text[n - 1 : m], n))
         self.text = self.text[0 : n - 1] + self.text[m : self.numLines]
         self.numLines -= m - n + 1
     
@@ -107,7 +109,7 @@ class TextEditor:
         else:
             self.redoStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n) + TextEditor.dot + str(n + len(text) - 1))
 
-        self.text = self.text[0 : n] + text + self.text[n : self.numLines]
+        self.text = self.text[0 : n - 1] + text + self.text[n - 1 : self.numLines]
         self.numLines = len(self.text)
     
     def copyMultipleLines(self, n, m):
@@ -119,7 +121,7 @@ class TextEditor:
     def pasteAtN(self, n):
         if (self.clipBoard == ""):
            return
-        self.insertMultipleLines(n - 1, self.clipBoard)
+        self.insertMultipleLines(n, self.clipBoard)
 
     def undoCommand(self):
         if len(self.commandStack) == 0:
@@ -155,9 +157,16 @@ class TextEditor:
             self.undoCommand()
         
         elif lenCommand == 1 and command == TextEditor.insertMultipleLineCommand:
-            n = self.deleteTextStack[0][1]
-            text = self.deleteTextStack[0][0]
-            self.deleteTextStack.pop(0)
+            
+            if TextEditor.undo:
+                n = self.deleteTextStackUndo[0][1]
+                text = self.deleteTextStackUndo[0][0]
+                self.deleteTextStackUndo.pop(0)
+            else:
+                n = self.deleteTextStackRedo[0][1]
+                text = self.deleteTextStackRedo[0][0]
+                self.deleteTextStackRedo.pop(0)
+            
             self.insertMultipleLines(n, text)
             TextEditor.undo = True
 
