@@ -74,6 +74,7 @@ class TextEditor:
             self.commandStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n))
         else :
             self.redoStack.insert(0, TextEditor.deleteLineCommand + TextEditor.dot + str(n))
+
         self.text.insert(n - 1, insertText)
         self.numLines += 1
 
@@ -227,7 +228,13 @@ class TextEditor:
             if (self.checkParsedValue(n)):
                 return
             command = command.split(self.dot) 
-            self.insertLineAtN(command[2], n)
+            insertText = ""
+
+            lenCommand = len(command)
+            for i in xrange(2, lenCommand - 1):
+                insertText += command[i] + TextEditor.dot
+            insertText += command[-1]
+            self.insertLineAtN(insertText, n)
             TextEditor.undo = True
             
         
